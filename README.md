@@ -36,11 +36,27 @@ daily-news-digest/
 └── README.md
 ```
 
+## Running it
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+# (optional) refresh data/news.csv with the latest RSS articles
+python scripts/fetch_news.py
+
+streamlit run app.py
+```
+
+The app loads `data/news.csv` by default. You can also upload your own CSV
+(same columns: `title, source, topic, published, summary, url`) from the
+sidebar to explore a different dataset without touching the code.
+
 ## Status
 
 - [x] Idea locked, repo scaffolded
-- [ ] RSS fetch script
-- [ ] Streamlit UI (filters, feed, charts)
+- [x] RSS fetch script
+- [x] Streamlit UI (topic/source/date filters, search, CSV upload, charts, feed)
 - [ ] AI-generated topic summaries
 - [ ] Screenshots + video demo
 - [ ] Project documentation (Google Doc)
