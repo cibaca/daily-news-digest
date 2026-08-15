@@ -18,6 +18,19 @@ FEEDS = {
         ("TechCrunch", "https://techcrunch.com/feed/"),
         ("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index"),
     ],
+    "AI": [
+        ("MIT Tech Review", "https://www.technologyreview.com/topic/artificial-intelligence/feed"),
+        ("AI News", "https://www.artificialintelligence-news.com/feed/"),
+    ],
+    "Software Engineering": [
+        ("InfoQ", "https://feed.infoq.com/"),
+        ("Hacker News", "https://hnrss.org/frontpage"),
+    ],
+    "Cloud": [
+        ("AWS Blog", "https://aws.amazon.com/blogs/aws/feed/"),
+        ("Google Cloud Blog", "https://cloudblog.withgoogle.com/rss/"),
+        ("Azure Blog", "https://azure.microsoft.com/en-us/blog/feed/"),
+    ],
     "World": [
         ("BBC World", "http://feeds.bbci.co.uk/news/world/rss.xml"),
         ("Reuters World", "https://www.reutersagency.com/feed/?best-topics=world&post_type=best"),
