@@ -1,4 +1,4 @@
-name: Refresh news CSV
+name: Refresh data (News, Research Papers, Knowledge Base)
 
 on:
   schedule:
@@ -22,17 +22,17 @@ jobs:
       - name: Install dependencies
         run: pip install feedparser pandas
 
-      - name: Fetch latest news
-        run: python scripts/fetch_news.py
+      - name: Fetch News, Research Papers, and Knowledge Base
+        run: python scripts/fetch_data.py
 
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- data/news.csv; then
-            git add data/news.csv
-            git commit -m "Auto-refresh news.csv $(date -u +%Y-%m-%d)"
+          if ! git diff --quiet -- data/news.csv data/research_papers.csv data/knowledge_base.csv; then
+            git add data/news.csv data/research_papers.csv data/knowledge_base.csv
+            git commit -m "Auto-refresh News/Research/Knowledge Base $(date -u +%Y-%m-%d)"
             git push
           else
-            echo "No changes in news.csv, skipping commit."
+            echo "No changes in data files, skipping commit."
           fi

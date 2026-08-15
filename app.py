@@ -6,7 +6,11 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-DATA_PATH = Path(__file__).parent / "data" / "news.csv"
+DATA_DIR = Path(__file__).parent / "data"
+NEWS_PATH = DATA_DIR / "news.csv"
+RESEARCH_PATH = DATA_DIR / "research_papers.csv"
+KNOWLEDGE_PATH = DATA_DIR / "knowledge_base.csv"
+
 STOPWORDS = {
     "the", "a", "an", "to", "of", "in", "on", "for", "and", "is", "are",
     "at", "with", "as", "by", "from", "it", "its", "this", "that", "be",
@@ -14,14 +18,14 @@ STOPWORDS = {
     "than", "his", "her", "their", "up", "out", "not", "vs", "amid",
 }
 
-# --- Color theme -----------------------------------------------------------
+# --- Color theme -------------------------------------------------------------
 # Validated categorical palette (dataviz skill: scripts/validate_palette.js).
 # Slot order is the CVD-safety mechanism -- kept fixed via category_orders=
 # on every chart so adjacency never drifts with the data.
 SLOT = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7"]
 
 TECH_TOPICS = ["Tech", "AI", "Software Engineering", "Cloud"]
-TOPIC_ORDER = ["Technology", "World", "Sports", "Finance", "Science", "Research Papers"]
+NEWS_ORDER = ["Technology", "World", "Sports", "Finance", "Science"]
 TECH_ORDER = ["Tech", "AI", "Software Engineering", "Cloud"]
 RESEARCH_FIELD_ORDER = [
     "General AI", "NLP", "Machine Learning", "Computer Vision",
@@ -29,37 +33,67 @@ RESEARCH_FIELD_ORDER = [
 ]
 STOCK_TICKERS = {"S&P 500": "^GSPC", "Nasdaq": "^IXIC", "Bitcoin": "BTC-USD"}
 STOCK_ORDER = list(STOCK_TICKERS.keys())
+AREA_ORDER = ["News", "Research Papers", "Knowledge Base"]
 
 TOPIC_EMOJI = {
     "Technology": "💻", "Tech": "💻", "AI": "🤖", "Software Engineering": "🛠️",
-    "Cloud": "☁️", "World": "🌍", "Sports": "🏅", "Finance": "💰",
-    "Science": "🔬", "Research Papers": "📄", "News": "📰",
+    "Cloud": "☁️", "World": "🌍", "Sports": "🏅", "Finance": "💰", "Science": "🔬",
 }
-TOPIC_COLOR = dict(zip(TOPIC_ORDER, SLOT))
-TOPIC_COLOR.update(dict(zip(TECH_ORDER, SLOT)))  # local context, own chart -- safe to reuse slots
+TOPIC_COLOR = {
+    "Technology": SLOT[0], "Tech": SLOT[0], "AI": SLOT[1], "Software Engineering": SLOT[2],
+    "Cloud": SLOT[3], "World": SLOT[1], "Sports": SLOT[2], "Finance": SLOT[3], "Science": SLOT[4],
+}
 RESEARCH_FIELD_COLOR = dict(zip(RESEARCH_FIELD_ORDER, SLOT))
 STOCK_COLOR = dict(zip(STOCK_ORDER, SLOT))
+AREA_COLOR = {"News": SLOT[0], "Research Papers": SLOT[1], "Knowledge Base": SLOT[2]}
+AREA_EMOJI = {"News": "📰", "Research Papers": "📄", "Knowledge Base": "📚"}
+KB_CARD_COLOR = SLOT[2]
 
-
-def emoji_for(topic: str) -> str:
-    return TOPIC_EMOJI.get(topic, "📰")
-
-
-def color_for(topic: str) -> str:
-    return TOPIC_COLOR.get(topic, "#64748b")
-
+NEWS_SOURCES_NOTE = (
+    "All News sources are mainstream, editorially-staffed outlets or official vendor/agency "
+    "blogs (BBC, NPR, ESPN, CNBC, NASA, TechCrunch, Ars Technica, MIT Tech Review, InfoQ, "
+    "AWS/Google Cloud/Azure) -- no content farms or unverified aggregators. Hacker News is "
+    "community-curated tech discussion, included for signal, not as a newsroom."
+)
 
 st.set_page_config(page_title="Daily News Digest", page_icon="📰", layout="wide")
 
 
 @st.cache_data
-def load_csv(path_or_buffer) -> pd.DataFrame:
-    df = pd.read_csv(path_or_buffer)
-    df["published"] = pd.to_datetime(df["published"])
-    if "subtopic" not in df.columns:
-        df["subtopic"] = ""
-    df["subtopic"] = df["subtopic"].fillna("")
-    return df
+def load_data() -> pd.DataFrame:
+    """Load News, Research Papers, and Knowledge Base CSVs and normalize into one schema."""
+    frames = []
+
+    if NEWS_PATH.exists():
+        news = pd.read_csv(NEWS_PATH)
+        news["published"] = pd.to_datetime(news["published"])
+        news["area"] = "News"
+        news["category"] = news["topic"]
+        news["color"] = news["category"].map(TOPIC_COLOR).fillna("#64748b")
+        news["emoji"] = news["category"].map(TOPIC_EMOJI).fillna("📰")
+        frames.append(news[["title", "source", "area", "category", "color", "emoji", "published", "summary", "url"]])
+
+    if RESEARCH_PATH.exists():
+        research = pd.read_csv(RESEARCH_PATH)
+        research["published"] = pd.to_datetime(research["published"])
+        research["area"] = "Research Papers"
+        research["category"] = research["field"]
+        research["color"] = research["category"].map(RESEARCH_FIELD_COLOR).fillna("#64748b")
+        research["emoji"] = "📄"
+        frames.append(research[["title", "source", "area", "category", "color", "emoji", "published", "summary", "url"]])
+
+    if KNOWLEDGE_PATH.exists():
+        kb = pd.read_csv(KNOWLEDGE_PATH)
+        kb["published"] = pd.to_datetime(kb["published"])
+        kb["area"] = "Knowledge Base"
+        kb["category"] = kb["section"]
+        kb["color"] = KB_CARD_COLOR
+        kb["emoji"] = "📚"
+        frames.append(kb[["title", "source", "area", "category", "color", "emoji", "published", "summary", "url"]])
+
+    if not frames:
+        return pd.DataFrame(columns=["title", "source", "area", "category", "color", "emoji", "published", "summary", "url"])
+    return pd.concat(frames, ignore_index=True)
 
 
 @st.cache_data(ttl=3600)
@@ -84,6 +118,15 @@ def top_keywords(titles: pd.Series, n: int = 12) -> pd.DataFrame:
     return pd.DataFrame(common, columns=["keyword", "count"])
 
 
+def keyword_chart(titles: pd.Series, height: int = 300, key: str = None):
+    kw_df = top_keywords(titles)
+    if kw_df.empty:
+        return
+    fig = px.bar(kw_df, x="count", y="keyword", orientation="h", color_discrete_sequence=[SLOT[0]])
+    fig.update_layout(yaxis={"categoryorder": "total ascending"}, height=height, showlegend=False)
+    st.plotly_chart(fig, use_container_width=True, key=key)
+
+
 def kicker(label: str, color: str, emoji: str):
     st.markdown(
         f"<div style='display:inline-block;background:{color};color:white;"
@@ -94,7 +137,15 @@ def kicker(label: str, color: str, emoji: str):
     )
 
 
-def render_market_snapshot():
+def overview_line(text: str):
+    st.markdown(
+        f"<div style='background:#f2f1ee;border-radius:8px;padding:0.7rem 1rem;"
+        f"margin-bottom:1rem;font-size:0.92rem;'>{text}</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_market_snapshot(key_prefix: str):
     st.subheader("📈 Market Snapshot")
     try:
         market_data = fetch_market_snapshot()
@@ -110,31 +161,25 @@ def render_market_snapshot():
         col.metric(name, f"{last:,.2f}", f"{pct:+.2f}%")
 
     indexed = market_data / market_data.iloc[0] * 100
-    fig = px.line(
-        indexed, x=indexed.index, y=STOCK_ORDER,
-        color_discrete_map=STOCK_COLOR,
-        category_orders={"variable": STOCK_ORDER},
-    )
-    fig.update_layout(
-        yaxis_title="Indexed performance (start = 100)", xaxis_title=None, legend_title=None,
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    fig = px.line(indexed, x=indexed.index, y=STOCK_ORDER, color_discrete_map=STOCK_COLOR)
+    fig.update_layout(yaxis_title="Indexed performance (start = 100)", xaxis_title=None, legend_title=None)
+    st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_chart")
     st.caption("Source: Yahoo Finance, cached hourly.")
 
 
-def render_card(row: pd.Series, latest_ts: pd.Timestamp):
-    is_fresh = (latest_ts - row["published"]) <= pd.Timedelta(hours=3)
+def render_card(row: pd.Series, latest_ts: pd.Timestamp, show_fresh_badge: bool = True):
+    is_fresh = show_fresh_badge and (latest_ts - row["published"]) <= pd.Timedelta(hours=3)
     badge = " &nbsp;🔥 <span style='color:#ef4444;font-size:0.75em;'>NEW</span>" if is_fresh else ""
     summary = row["summary"] if pd.notna(row["summary"]) and row["summary"] else ""
     st.markdown(
         f"""
-<div style="border:1px solid rgba(128,128,128,0.25);border-left:4px solid {color_for(row['topic'])};
+<div style="border:1px solid rgba(128,128,128,0.25);border-left:4px solid {row['color']};
             border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;height:100%;">
   <div class="headline-title" style="font-weight:600;margin-bottom:0.25rem;">
     <a href="{row['url']}" target="_blank" style="text-decoration:none;">{row['title']}</a>{badge}
   </div>
   <div style="font-size:0.8em;opacity:0.65;margin-bottom:0.4rem;">
-    {emoji_for(row['topic'])} {row['topic']} · {row['source']} · {row['published']:%b %d, %H:%M}
+    {row['emoji']} {row['area']} · {row['category']} · {row['source']} · {row['published']:%b %d, %H:%M}
   </div>
   <div style="font-size:0.9em;opacity:0.85;">{summary}</div>
 </div>
@@ -143,7 +188,7 @@ def render_card(row: pd.Series, latest_ts: pd.Timestamp):
     )
 
 
-def render_feed(feed: pd.DataFrame, latest_ts: pd.Timestamp, key_prefix: str):
+def render_feed(feed: pd.DataFrame, latest_ts: pd.Timestamp, key_prefix: str, show_fresh_badge: bool = True):
     col_a, col_b = st.columns([2, 1])
     with col_a:
         sort_choice = st.radio(
@@ -165,18 +210,22 @@ def render_feed(feed: pd.DataFrame, latest_ts: pd.Timestamp, key_prefix: str):
     show_n = st.session_state.get(f"{key_prefix}_show", 10)
     page = feed.head(show_n)
 
+    if page.empty:
+        st.info("No items match the current filters.")
+        return
+
     if view == "Card grid":
         cols = st.columns(2)
         for i, (_, row) in enumerate(page.iterrows()):
             with cols[i % 2]:
-                render_card(row, latest_ts)
+                render_card(row, latest_ts, show_fresh_badge)
     else:
         for _, row in page.iterrows():
-            is_fresh = (latest_ts - row["published"]) <= pd.Timedelta(hours=3)
+            is_fresh = show_fresh_badge and (latest_ts - row["published"]) <= pd.Timedelta(hours=3)
             badge = " 🔥" if is_fresh else ""
             st.markdown(
-                f"{emoji_for(row['topic'])} **[{row['title']}]({row['url']})**{badge}  "
-                f"<span style='opacity:0.6;font-size:0.85em;'>· {row['source']} · "
+                f"{row['emoji']} **[{row['title']}]({row['url']})**{badge}  "
+                f"<span style='opacity:0.6;font-size:0.85em;'>· {row['category']} · {row['source']} · "
                 f"{row['published']:%b %d, %H:%M}</span>",
                 unsafe_allow_html=True,
             )
@@ -187,18 +236,12 @@ def render_feed(feed: pd.DataFrame, latest_ts: pd.Timestamp, key_prefix: str):
             st.rerun()
 
 
-def render_topic_section(topic_df: pd.DataFrame, topic: str, latest_ts: pd.Timestamp, key_prefix: str, extra=None):
-    kicker(topic, color_for(topic), emoji_for(topic))
-    if extra:
-        extra()
-    st.subheader(f"Top keywords — {topic}")
-    kw_df = top_keywords(topic_df["title"])
-    if not kw_df.empty:
-        fig = px.bar(kw_df, x="count", y="keyword", orientation="h", color_discrete_sequence=[SLOT[0]])
-        fig.update_layout(yaxis={"categoryorder": "total ascending"}, height=300, showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
-    st.subheader(f"{len(topic_df)} articles")
-    render_feed(topic_df, latest_ts, key_prefix=key_prefix)
+def render_category_section(cat_df: pd.DataFrame, category: str, color: str, emoji: str, latest_ts: pd.Timestamp, key_prefix: str, show_fresh_badge: bool = True):
+    kicker(category, color, emoji)
+    st.subheader(f"Top keywords — {category}")
+    keyword_chart(cat_df["title"], height=300, key=f"{key_prefix}_kw")
+    st.subheader(f"{len(cat_df)} items")
+    render_feed(cat_df, latest_ts, key_prefix=key_prefix, show_fresh_badge=show_fresh_badge)
 
 
 # --- Masthead -----------------------------------------------------------------
@@ -216,106 +259,111 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- Sidebar: data source + filters ---------------------------------------
-st.sidebar.header("Data source")
-uploaded = st.sidebar.file_uploader("Upload your own news CSV", type="csv")
-use_default = st.sidebar.checkbox("Use bundled sample CSV", value=uploaded is None)
-
-if uploaded is not None and not use_default:
-    df = load_csv(uploaded)
-    st.sidebar.success(f"Loaded {len(df)} articles from upload")
-elif DATA_PATH.exists():
-    df = load_csv(DATA_PATH)
-    st.sidebar.info(f"Loaded {len(df)} articles from data/news.csv")
-else:
-    st.error("No data available. Upload a CSV or run `python scripts/fetch_news.py` first.")
+items = load_data()
+if items.empty:
+    st.error("No data available. Run `python scripts/fetch_data.py` to generate the CSVs first.")
     st.stop()
 
-st.sidebar.header("Filters")
-topics = sorted(df["topic"].dropna().unique())
-selected_topics = st.sidebar.multiselect(
-    "Topics", topics, default=topics, format_func=lambda t: f"{emoji_for(t)} {t}"
-)
+news_all = items[items["area"] == "News"]
+research_all = items[items["area"] == "Research Papers"]
+kb_all = items[items["area"] == "Knowledge Base"]
 
-sources = sorted(df["source"].dropna().unique())
-selected_sources = st.sidebar.multiselect("Sources", sources, default=sources)
+# --- Sidebar: per-area filters -------------------------------------------------
+st.sidebar.title("Filters")
 
-min_date, max_date = df["published"].min().date(), df["published"].max().date()
-if min_date == max_date:
-    date_range = (min_date, max_date)
-else:
-    date_range = st.sidebar.slider(
-        "Date range", min_value=min_date, max_value=max_date, value=(min_date, max_date)
+with st.sidebar.expander("📰 News", expanded=True):
+    news_categories = sorted(news_all["category"].unique())
+    sel_news_cat = st.multiselect(
+        "Topics", news_categories, default=news_categories,
+        format_func=lambda t: f"{TOPIC_EMOJI.get(t, '')} {t}", key="news_cat",
     )
+    news_sources = sorted(news_all["source"].unique())
+    sel_news_src = st.multiselect("Sources", news_sources, default=news_sources, key="news_src")
+    if not news_all.empty:
+        min_d, max_d = news_all["published"].min().date(), news_all["published"].max().date()
+        news_date_range = (min_d, max_d) if min_d == max_d else st.slider(
+            "Date range", min_value=min_d, max_value=max_d, value=(min_d, max_d), key="news_date"
+        )
+    else:
+        news_date_range = None
 
-search = st.sidebar.text_input("Search in title/summary")
+with st.sidebar.expander("📄 Research Papers"):
+    research_fields = sorted(research_all["category"].unique())
+    sel_research_cat = st.multiselect("Fields", research_fields, default=research_fields, key="research_cat")
 
-# --- Apply filters ----------------------------------------------------------
-filtered = df[
-    df["topic"].isin(selected_topics)
-    & df["source"].isin(selected_sources)
-    & (df["published"].dt.date >= date_range[0])
-    & (df["published"].dt.date <= date_range[1])
-]
+with st.sidebar.expander("📚 Knowledge Base"):
+    kb_sections = sorted(kb_all["category"].unique())
+    sel_kb_cat = st.multiselect("Sections", kb_sections, default=kb_sections, key="kb_cat")
+
+search = st.sidebar.text_input("🔎 Search everything")
+
+# --- Apply filters --------------------------------------------------------------
+news_mask = items["area"].eq("News") & items["category"].isin(sel_news_cat) & items["source"].isin(sel_news_src)
+if news_date_range:
+    news_mask &= items["published"].dt.date.between(news_date_range[0], news_date_range[1])
+research_mask = items["area"].eq("Research Papers") & items["category"].isin(sel_research_cat)
+kb_mask = items["area"].eq("Knowledge Base") & items["category"].isin(sel_kb_cat)
+
+filtered = items[news_mask | research_mask | kb_mask]
 if search:
-    mask = filtered["title"].str.contains(search, case=False, na=False) | filtered[
-        "summary"
-    ].str.contains(search, case=False, na=False)
-    filtered = filtered[mask]
+    m = filtered["title"].str.contains(search, case=False, na=False) | filtered["summary"].str.contains(search, case=False, na=False)
+    filtered = filtered[m]
 
-data_freshness = df["published"].max()
+data_freshness = items["published"].max()
 st.caption(
-    f"🕒 Data as of **{data_freshness:%b %d, %Y %H:%M}** · "
-    f"{df['source'].nunique()} sources · refreshes daily via GitHub Actions"
+    f"🕒 News/Research as of **{news_all['published'].max():%b %d, %Y %H:%M}** · "
+    f"Knowledge Base last synced **{kb_all['published'].max():%b %d, %Y}** · refreshes daily via GitHub Actions"
 )
 
 if filtered.empty:
-    st.warning("No articles match the current filters.")
+    st.warning("No items match the current filters.")
     st.stop()
 
-# --- Metrics -----------------------------------------------------------------
 c1, c2, c3 = st.columns(3)
-c1.metric("Articles", len(filtered))
-c2.metric("Topics", filtered["topic"].nunique())
+c1.metric("Items", len(filtered))
+c2.metric("Areas", filtered["area"].nunique())
 c3.metric("Sources", filtered["source"].nunique())
 
-# --- Top-level areas: Overview / News / Research Papers -------------------------
-tech_selected = [t for t in TECH_TOPICS if t in selected_topics]
-other_news_selected = [t for t in ["World", "Sports", "Finance", "Science"] if t in selected_topics]
-news_selected = tech_selected or other_news_selected
-research_selected = "Research Papers" in selected_topics
+news_f = filtered[filtered["area"] == "News"]
+research_f = filtered[filtered["area"] == "Research Papers"]
+kb_f = filtered[filtered["area"] == "Knowledge Base"]
 
-tab_labels = ["📊 Overview"]
-if news_selected:
-    news_count = filtered["topic"].isin(tech_selected + other_news_selected).sum()
-    tab_labels.append(f"📰 News ({news_count})")
-if research_selected:
-    rp_count = (filtered["topic"] == "Research Papers").sum()
-    tab_labels.append(f"📄 Research Papers ({rp_count})")
+tabs = st.tabs(["📊 Overview", f"📰 News ({len(news_f)})", f"📄 Research Papers ({len(research_f)})", f"📚 Knowledge Base ({len(kb_f)})"])
 
-tabs = st.tabs(tab_labels)
-tab_idx = 1
-
-# --- Overview: compiles News + Research Papers together for a bird's-eye view --
+# ============================= OVERVIEW ==========================================
 with tabs[0]:
-    top_source = filtered["source"].value_counts().idxmax()
-    top_topic = filtered["topic"].value_counts().idxmax()
-    m1, m2 = st.columns(2)
-    m1.metric("Most active topic", f"{emoji_for(top_topic)} {top_topic}", f"{(filtered['topic'] == top_topic).sum()} articles")
-    m2.metric("Most active source", top_source, f"{(filtered['source'] == top_source).sum()} articles")
+    overview_bits = []
+    if not news_f.empty:
+        top_news_cat = news_f["category"].value_counts().idxmax()
+        overview_bits.append(
+            f"📰 **News**: {len(news_f)} articles from {news_f['source'].nunique()} trusted sources "
+            f"across {news_f['category'].nunique()} topics -- most active: {TOPIC_EMOJI.get(top_news_cat,'')} {top_news_cat}."
+        )
+    if not research_f.empty:
+        top_field = research_f["category"].value_counts().idxmax()
+        overview_bits.append(
+            f"📄 **Research Papers**: {len(research_f)} arXiv papers across {research_f['category'].nunique()} fields "
+            f"-- most active: {top_field}."
+        )
+    if not kb_f.empty:
+        top_section = kb_f["category"].value_counts().idxmax()
+        overview_bits.append(
+            f"📚 **Knowledge Base**: {len(kb_f)} curated resources across {kb_f['category'].nunique()} sections "
+            f"from a single controlled source -- largest: {top_section}."
+        )
+    overview_line("&nbsp;&nbsp;|&nbsp;&nbsp;".join(overview_bits))
 
     chart1, chart2 = st.columns(2)
     with chart1:
-        st.subheader("Articles by area")
-        display_topic = filtered["topic"].apply(lambda t: "Technology" if t in TECH_TOPICS else t)
-        topic_counts = display_topic.value_counts().reindex(TOPIC_ORDER).dropna().reset_index()
-        topic_counts.columns = ["topic", "count"]
+        st.subheader("Items by area")
+        area_counts = filtered["area"].value_counts().reindex(AREA_ORDER).dropna().reset_index()
+        area_counts.columns = ["area", "count"]
         fig = px.bar(
-            topic_counts, x="topic", y="count", color="topic",
-            color_discrete_map=TOPIC_COLOR, category_orders={"topic": TOPIC_ORDER},
+            area_counts, x="area", y="count", color="area",
+            color_discrete_map=AREA_COLOR, category_orders={"area": AREA_ORDER},
         )
         fig.update_layout(showlegend=False, xaxis_title=None)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="overview_area_chart")
 
     with chart2:
         st.subheader("Top sources by volume")
@@ -323,101 +371,141 @@ with tabs[0]:
         source_counts.columns = ["source", "count"]
         fig_src = px.bar(source_counts, x="count", y="source", orientation="h", color_discrete_sequence=[SLOT[0]])
         fig_src.update_layout(yaxis={"categoryorder": "total ascending"}, showlegend=False)
-        st.plotly_chart(fig_src, use_container_width=True)
+        st.plotly_chart(fig_src, use_container_width=True, key="overview_sources_chart")
 
-    st.subheader("Top keywords in headlines")
-    kw_df = top_keywords(filtered["title"])
-    fig2 = px.bar(kw_df, x="count", y="keyword", orientation="h", color_discrete_sequence=[SLOT[0]])
-    fig2.update_layout(yaxis={"categoryorder": "total ascending"}, height=320, showlegend=False)
-    st.plotly_chart(fig2, use_container_width=True)
+    st.subheader("Top keywords (News + Research headlines)")
+    keyword_chart(pd.concat([news_f["title"], research_f["title"]]), height=320, key="overview_kw")
 
-    st.subheader("Articles over time")
-    timeline = filtered.set_index("published").resample("h").size().reset_index(name="count")
-    fig3 = px.line(timeline, x="published", y="count", color_discrete_sequence=[SLOT[0]])
-    fig3.update_layout(xaxis_title=None)
-    st.plotly_chart(fig3, use_container_width=True)
+    if not news_f.empty:
+        st.subheader("News activity over time")
+        timeline = news_f.set_index("published").resample("h").size().reset_index(name="count")
+        fig3 = px.line(timeline, x="published", y="count", color_discrete_sequence=[SLOT[0]])
+        fig3.update_layout(xaxis_title=None)
+        st.plotly_chart(fig3, use_container_width=True, key="overview_timeline_chart")
 
-    st.subheader("Latest headlines across everything")
+    render_market_snapshot(key_prefix="overview_market")
+
+    st.subheader("Latest across everything")
     render_feed(filtered, data_freshness, key_prefix="overview")
 
-# --- News area: Technology / World / Sports / Finance / Science ----------------
-if news_selected:
-    with tabs[tab_idx]:
+# ============================= NEWS ==============================================
+with tabs[1]:
+    if news_f.empty:
+        st.info("No News items match the current filters.")
+    else:
         kicker("News", "#334155", "📰")
+        with st.expander("ℹ️ About these sources"):
+            st.write(NEWS_SOURCES_NOTE)
+
+        tech_selected = [t for t in TECH_TOPICS if t in sel_news_cat]
+        other_news_selected = [t for t in ["World", "Sports", "Finance", "Science"] if t in sel_news_cat]
+
         news_sub_labels = []
         if tech_selected:
-            news_sub_labels.append(f"{emoji_for('Technology')} Technology")
-        news_sub_labels += [f"{emoji_for(t)} {t}" for t in other_news_selected]
-        news_tabs = st.tabs(news_sub_labels)
+            news_sub_labels.append("💻 Technology")
+        news_sub_labels += [f"{TOPIC_EMOJI.get(t,'')} {t}" for t in other_news_selected]
+        news_tabs = st.tabs(news_sub_labels) if news_sub_labels else []
         n_idx = 0
 
         if tech_selected:
             with news_tabs[n_idx]:
-                kicker("Technology", color_for("Technology"), emoji_for("Technology"))
-                tech_df = filtered[filtered["topic"].isin(tech_selected)]
+                kicker("Technology", TOPIC_COLOR["Technology"], TOPIC_EMOJI["Technology"])
+                tech_df = news_f[news_f["category"].isin(tech_selected)]
 
                 st.subheader("Articles by tech sub-topic")
-                sub_counts = tech_df["topic"].value_counts().reindex(tech_selected).dropna().reset_index()
-                sub_counts.columns = ["topic", "count"]
+                sub_counts = tech_df["category"].value_counts().reindex(tech_selected).dropna().reset_index()
+                sub_counts.columns = ["category", "count"]
                 fig_tech = px.bar(
-                    sub_counts, x="topic", y="count", color="topic",
-                    color_discrete_map=TOPIC_COLOR, category_orders={"topic": TECH_ORDER},
+                    sub_counts, x="category", y="count", color="category",
+                    color_discrete_map=TOPIC_COLOR, category_orders={"category": TECH_ORDER},
                 )
                 fig_tech.update_layout(showlegend=False, xaxis_title=None)
-                st.plotly_chart(fig_tech, use_container_width=True)
+                st.plotly_chart(fig_tech, use_container_width=True, key="tech_subtopic_chart")
 
-                sub_tab_labels = ["All Tech"] + [f"{emoji_for(t)} {t}" for t in tech_selected]
+                sub_tab_labels = ["All Tech"] + [f"{TOPIC_EMOJI.get(t,'')} {t}" for t in tech_selected]
                 sub_tabs = st.tabs(sub_tab_labels)
                 with sub_tabs[0]:
                     st.subheader(f"{len(tech_df)} technology articles")
                     render_feed(tech_df, data_freshness, key_prefix="tech_all")
                 for s_tab, t in zip(sub_tabs[1:], tech_selected):
                     with s_tab:
-                        render_topic_section(filtered[filtered["topic"] == t], t, data_freshness, key_prefix=f"tech_{t}")
+                        render_category_section(
+                            news_f[news_f["category"] == t], t, TOPIC_COLOR.get(t, "#64748b"),
+                            TOPIC_EMOJI.get(t, ""), data_freshness, key_prefix=f"tech_{t}",
+                        )
             n_idx += 1
 
         for topic in other_news_selected:
             with news_tabs[n_idx]:
-                extra = render_market_snapshot if topic == "Finance" else None
-                render_topic_section(filtered[filtered["topic"] == topic], topic, data_freshness, key_prefix=topic, extra=extra)
+                render_category_section(
+                    news_f[news_f["category"] == topic], topic, TOPIC_COLOR.get(topic, "#64748b"),
+                    TOPIC_EMOJI.get(topic, ""), data_freshness, key_prefix=topic,
+                )
+                if topic == "Finance":
+                    render_market_snapshot(key_prefix="finance_market")
             n_idx += 1
-    tab_idx += 1
 
-# --- Research Papers area: kept fully separate from News ------------------------
-if research_selected:
-    with tabs[tab_idx]:
-        kicker("Research Papers", color_for("Research Papers"), emoji_for("Research Papers"))
-        rp_df = filtered[filtered["topic"] == "Research Papers"]
-        st.caption("Latest papers from arXiv (cs.AI), broken down by field via each paper's own category tags. Kept separate from the News area by design.")
+# ============================= RESEARCH PAPERS ====================================
+with tabs[2]:
+    if research_f.empty:
+        st.info("No Research Papers match the current filters.")
+    else:
+        kicker("Research Papers", AREA_COLOR["Research Papers"], AREA_EMOJI["Research Papers"])
+        st.caption(
+            "Latest papers from arXiv (cs.AI), classified by field from each paper's own category "
+            "tags. Kept fully separate from the News area by design."
+        )
 
         rc1, rc2 = st.columns(2)
-        rc1.metric("Papers", len(rp_df))
-        rc2.metric("Fields covered", rp_df["subtopic"].nunique())
+        rc1.metric("Papers", len(research_f))
+        rc2.metric("Fields covered", research_f["category"].nunique())
 
         st.subheader("Papers by field")
-        field_counts = rp_df["subtopic"].value_counts().reindex(RESEARCH_FIELD_ORDER).dropna().reset_index()
+        field_counts = research_f["category"].value_counts().reindex(RESEARCH_FIELD_ORDER).dropna().reset_index()
         field_counts.columns = ["field", "count"]
         fig_field = px.bar(
             field_counts, x="count", y="field", orientation="h", color="field",
             color_discrete_map=RESEARCH_FIELD_COLOR, category_orders={"field": RESEARCH_FIELD_ORDER},
         )
         fig_field.update_layout(yaxis={"categoryorder": "total ascending"}, height=320, showlegend=False)
-        st.plotly_chart(fig_field, use_container_width=True)
+        st.plotly_chart(fig_field, use_container_width=True, key="research_field_chart")
 
         st.subheader("Top keywords in paper titles")
-        kw_df = top_keywords(rp_df["title"])
-        fig_kw = px.bar(kw_df, x="count", y="keyword", orientation="h", color_discrete_sequence=[SLOT[0]])
-        fig_kw.update_layout(yaxis={"categoryorder": "total ascending"}, height=320, showlegend=False)
-        st.plotly_chart(fig_kw, use_container_width=True)
+        keyword_chart(research_f["title"], height=320, key="research_kw")
 
-        field_tab_labels = ["All fields"] + [f for f in RESEARCH_FIELD_ORDER if f in rp_df["subtopic"].unique()]
+        field_tab_labels = ["All fields"] + [f for f in RESEARCH_FIELD_ORDER if f in research_f["category"].unique()]
         field_tabs = st.tabs(field_tab_labels)
         with field_tabs[0]:
-            st.subheader(f"{len(rp_df)} papers")
-            render_feed(rp_df, data_freshness, key_prefix="rp_all")
+            st.subheader(f"{len(research_f)} papers")
+            render_feed(research_f, data_freshness, key_prefix="rp_all")
         for f_tab, field in zip(field_tabs[1:], field_tab_labels[1:]):
             with f_tab:
-                field_df = rp_df[rp_df["subtopic"] == field]
+                field_df = research_f[research_f["category"] == field]
                 st.subheader(f"{field} — {len(field_df)} papers")
                 render_feed(field_df, data_freshness, key_prefix=f"rp_{field}")
-    tab_idx += 1
+
+# ============================= KNOWLEDGE BASE =====================================
+with tabs[3]:
+    if kb_f.empty:
+        st.info("No Knowledge Base resources match the current filters.")
+    else:
+        kicker("Knowledge Base", AREA_COLOR["Knowledge Base"], AREA_EMOJI["Knowledge Base"])
+        source_name = kb_f["source"].iloc[0]
+        st.caption(
+            f"A single, actively-maintained, source-controlled reference list ({source_name}) -- "
+            "not a news feed. Re-synced daily; kept fully separate from News and Research Papers."
+        )
+
+        kc1, kc2 = st.columns(2)
+        kc1.metric("Resources", len(kb_f))
+        kc2.metric("Sections", kb_f["category"].nunique())
+
+        st.subheader("Resources by section")
+        section_counts = kb_f["category"].value_counts().reset_index()
+        section_counts.columns = ["section", "count"]
+        fig_kb = px.bar(section_counts, x="count", y="section", orientation="h", color_discrete_sequence=[SLOT[2]])
+        fig_kb.update_layout(yaxis={"categoryorder": "total ascending"}, height=400, showlegend=False)
+        st.plotly_chart(fig_kb, use_container_width=True, key="kb_section_chart")
+
+        st.subheader(f"{len(kb_f)} resources")
+        render_feed(kb_f, data_freshness, key_prefix="kb", show_fresh_badge=False)
