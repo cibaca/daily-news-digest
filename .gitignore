@@ -7,7 +7,8 @@ venv/
 .DS_Store
 
 # Course submission prep -- video script, screenshot planning, and raw screenshots stay local,
-# not part of the app. .docs/project_documentation.md is intentionally tracked (see below).
-.docs/video_script.md
-.docs/screenshot_ideas.md
-.docs/screenshots/
+# not part of the app (dot-prefixed = gitignored). docs/project_documentation.md is
+# intentionally tracked (see below).
+docs/.video_script.md
+docs/.screenshot_ideas.md
+docs/.screenshots/
