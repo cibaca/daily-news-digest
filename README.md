@@ -12,6 +12,16 @@ own top-level area in the dashboard — **News**, **Research Papers**, and **Kno
 so day-to-day headlines, academic papers, and curated reference material never get mixed
 together, filtered together, or charted together.
 
+## Simple mode
+
+A sidebar toggle ("👋 Simple mode") swaps technical labels for plain-language equivalents
+throughout the whole app — topics, research fields, Knowledge Base sections, tab names, chart
+axis labels, and the source-trust notes — for a non-technical reader. For example: "NLP" →
+"Language AI (understands text)", "Software Engineering" → "Coding & App Development",
+"Knowledge Base" → "Learning Resources". Nothing about the underlying data or filtering
+changes — it's a display-only relabeling, plus a one-line plain-English legend explaining what
+the three tabs mean.
+
 ## Layout
 
 - **📊 Overview** — a compiled summary across all three areas: an auto-generated stats blurb,
