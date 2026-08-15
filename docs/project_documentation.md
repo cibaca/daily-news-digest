@@ -1,9 +1,5 @@
 # Daily News Digest — Project Documentation
 
-*Mastering Agentic AI Bootcamp — Week 1 Project, Path B (build your own vibe-coded app)*
-
-Copy/paste this into the Google Doc for submission. Fill in the [bracketed] parts.
-
 ---
 
 ## Project overview
@@ -50,7 +46,7 @@ audit.
 
 ## Prompts used during vibe coding (condensed to the essential ones)
 
-1. *"Lock down an idea and create a GitHub repo — give me a list of Path B ideas, maybe a news
+1. *"Lock down an idea and create a GitHub repo — give me a list of project ideas, maybe a news
    compilation and interest topics."* → Brainstormed options, picked **Personal Interest News
    Digest**, created the GitHub repo, chose RSS (no API key) as the data source.
 2. *"Project should be from CSV, with options in Streamlit to make changes. Auto-refresh once

@@ -1,7 +1,6 @@
 # Daily News Digest
 
-A news-outlet-style dashboard built with **vibe coding** (Claude Code + Streamlit) for the
-Mastering Agentic AI Bootcamp — Week 1 Project (Path B).
+A news-outlet-style dashboard built with **vibe coding** (Claude Code + Streamlit).
 
 **Live app:** https://daily-news-digest-aug2026.streamlit.app
 
@@ -191,7 +190,3 @@ build on this project or reference it, a credit/link back is appreciated:
 - [x] MIT license, with third-party content/attribution clarified
 - [ ] Screenshots + video demo
 - [ ] Project documentation (Google Doc)
-
-## Course deliverables
-
-Built for the Mastering Agentic AI Bootcamp, Week 1 Project — deadline Aug 16, 2026, 11:59pm PT.
