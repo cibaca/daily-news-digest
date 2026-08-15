@@ -149,12 +149,34 @@ the **⋮** menu → **Reboot app** to force a fresh redeploy.
 
 ## License & citation
 
-MIT licensed — see [LICENSE](LICENSE). You're free to use, modify, and redistribute this
-project (including commercially), as long as the copyright notice and license text are kept
-with any copy. If you build on this project or reference it, a credit/link back is appreciated:
+MIT licensed — see [LICENSE](LICENSE). **This covers the code in this repository only.** It
+does not grant any rights to the third-party content the app displays at runtime — news
+excerpts, paper abstracts, and Knowledge Base entries remain the property of their original
+publishers/authors. You're free to use, modify, and redistribute the *code* (including
+commercially), as long as the copyright notice and license text are kept with any copy. If you
+build on this project or reference it, a credit/link back is appreciated:
 
 > Daily News Digest — Cibaca Khandelwal ([@cibaca](https://github.com/cibaca)) —
 > https://github.com/cibaca/daily-news-digest
+
+### Third-party content & data — attribution
+
+- **News**: each article shows only a short excerpt (title + a truncated summary, capped at 300
+  characters) with the source name and a link back to the original — the standard RSS
+  aggregation pattern (same as Google News/Feedly), not full-article reproduction. Full rights
+  remain with the publisher.
+- **Research papers**: metadata and abstracts via [arXiv](https://arxiv.org)'s public API/RSS,
+  used exactly as arXiv's own interoperability feeds are intended. *Thank you to arXiv for use
+  of its open access interoperability.* Each paper remains under its own author-chosen license;
+  this app only links out to the original.
+- **Knowledge Base**: sourced from
+  [`owainlewis/awesome-artificial-intelligence`](https://github.com/owainlewis/awesome-artificial-intelligence),
+  itself MIT-licensed — reuse with attribution (which this app provides: source name shown on
+  every card, plus a link to the original repo and each linked resource) is within its terms.
+- **Market Snapshot**: via [`yfinance`](https://github.com/ranaroussi/yfinance), an unofficial,
+  community-maintained library — not affiliated with or endorsed by Yahoo. Data is shown for
+  informational/educational purposes only and should not be used as the basis for financial or
+  trading decisions.
 
 ## Status
 
@@ -166,7 +188,7 @@ with any copy. If you build on this project or reference it, a credit/link back 
 - [x] Validated color theme + professional Streamlit theme config
 - [x] Data-driven overview summary per area
 - [x] Deployed to Streamlit Community Cloud
-- [x] MIT license
+- [x] MIT license, with third-party content/attribution clarified
 - [ ] Screenshots + video demo
 - [ ] Project documentation (Google Doc)
 
