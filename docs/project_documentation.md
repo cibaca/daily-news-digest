@@ -114,13 +114,36 @@ audit.
 
 ## Learnings / observations
 
-- [Add your own reflection here, e.g.: what surprised you about working with Claude Code,
-  where it needed correction, what you'd do differently, how the iterative "keep asking for
-  more" workflow compared to writing a full spec up front.]
-- [Note something about the trust/data-source curation process — auditing RSS feeds and
-  swapping broken ones is a real part of "AI news app" building that's easy to overlook.]
-- [Note something about verification — e.g., the gap between "the server started without
-  errors" and "the script actually ran without exceptions," and why that distinction mattered.]
+- **The biggest surprise was how quickly an idea became a working product.** Instead of
+  spending days setting up project structure, deployment, CI/CD, and data pipelines, I was able
+  to get a usable application running very early and spend most of my time evaluating features
+  and improving the user experience.
+- **Prompt quality mattered more than writing detailed technical specifications.** The most
+  productive workflow was not creating a massive requirements document upfront. Instead, I
+  continuously reviewed the application, identified the next improvement, and gave focused
+  instructions. Each iteration made the product noticeably better and helped discover
+  requirements that were not obvious at the beginning.
+- **Building the app exposed product decisions faster than planning alone.** Once the dashboard
+  was live, it became immediately clear which features were useful, which navigation patterns
+  were confusing, and which data sources needed improvement. Rapid implementation shortened the
+  feedback loop between idea, execution, and evaluation.
+- **AI significantly reduced development friction but still required direction.** Claude Code
+  handled most implementation tasks quickly, including data ingestion, UI development,
+  deployment, testing updates, and project organization. My role shifted from writing every line
+  of code to defining goals, reviewing outputs, validating decisions, and deciding what should
+  be built next.
+- **Data source reliability became a larger challenge than coding.** More time was spent
+  validating feeds, replacing broken sources, checking licensing, and improving content
+  organization than writing application logic. The quality of the final product depended
+  heavily on the quality of the underlying data.
+- **Testing and verification remain essential.** A running application does not guarantee a
+  correct application. Several issues were only discovered after testing the actual Streamlit
+  execution path, reinforcing the importance of validating outputs rather than assuming
+  generated code is correct.
+- **The project changed how I think about software development.** With modern AI coding agents,
+  implementation is no longer the primary bottleneck for many small applications. The greater
+  challenge is defining the right problem, selecting trustworthy data, evaluating results, and
+  continuously refining the product through iteration.
 
 ## Tech stack
 
