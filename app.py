@@ -23,10 +23,15 @@ STOPWORDS = {
 # Slot order is the CVD-safety mechanism -- kept fixed via category_orders=
 # on every chart so adjacency never drifts with the data.
 SLOT = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7"]
+# Pastel tints + darkened text of each SLOT hue -- for "newspaper section tag" UI chrome
+# (kickers, card backgrounds). Decorative use only; charts keep the full-saturation SLOT
+# colors above, since those are what the CVD/contrast validator gates apply to.
+PASTEL_MAP = dict(zip(SLOT, ["#d4e4f7", "#fbe1d6", "#d1efe4", "#fbeccc", "#fae5ed", "#cce6cc", "#dbd8ed"]))
+TEXT_MAP = dict(zip(SLOT, ["#1e569a", "#a94b25", "#137e58", "#ab7400", "#a75976", "#005e00", "#352a78"]))
 
-TECH_TOPICS = ["Tech", "AI", "Software Engineering", "Cloud"]
+TECH_TOPICS = ["Tech", "AI", "Software Engineering", "Cloud", "Cybersecurity"]
 NEWS_ORDER = ["Technology", "World", "Sports", "Finance", "Science"]
-TECH_ORDER = ["Tech", "AI", "Software Engineering", "Cloud"]
+TECH_ORDER = ["Tech", "AI", "Software Engineering", "Cloud", "Cybersecurity"]
 RESEARCH_FIELD_ORDER = [
     "General AI", "NLP", "Machine Learning", "Computer Vision",
     "AI & Society", "Robotics", "Neural / Evolutionary",
@@ -37,11 +42,12 @@ AREA_ORDER = ["News", "Research Papers", "Knowledge Base"]
 
 TOPIC_EMOJI = {
     "Technology": "💻", "Tech": "💻", "AI": "🤖", "Software Engineering": "🛠️",
-    "Cloud": "☁️", "World": "🌍", "Sports": "🏅", "Finance": "💰", "Science": "🔬",
+    "Cloud": "☁️", "Cybersecurity": "🛡️", "World": "🌍", "Sports": "🏅", "Finance": "💰", "Science": "🔬",
 }
 TOPIC_COLOR = {
     "Technology": SLOT[0], "Tech": SLOT[0], "AI": SLOT[1], "Software Engineering": SLOT[2],
-    "Cloud": SLOT[3], "World": SLOT[1], "Sports": SLOT[2], "Finance": SLOT[3], "Science": SLOT[4],
+    "Cloud": SLOT[3], "Cybersecurity": SLOT[4], "World": SLOT[1], "Sports": SLOT[2],
+    "Finance": SLOT[3], "Science": SLOT[4],
 }
 RESEARCH_FIELD_COLOR = dict(zip(RESEARCH_FIELD_ORDER, SLOT))
 STOCK_COLOR = dict(zip(STOCK_ORDER, SLOT))
@@ -52,7 +58,8 @@ KB_CARD_COLOR = SLOT[2]
 NEWS_SOURCES_NOTE = (
     "All News sources are mainstream, editorially-staffed outlets or official vendor/agency "
     "blogs (BBC, NPR, ESPN, CNBC, NASA, TechCrunch, Ars Technica, MIT Tech Review, InfoQ, "
-    "AWS/Google Cloud/Azure) -- no content farms or unverified aggregators. Hacker News is "
+    "AWS/Google Cloud/Azure, Krebs on Security, The Hacker News, BleepingComputer) -- no "
+    "content farms or unverified aggregators. Hacker News (the aggregator, not Krebs) is "
     "community-curated tech discussion, included for signal, not as a newsroom."
 )
 
@@ -128,9 +135,11 @@ def keyword_chart(titles: pd.Series, height: int = 300, key: str = None):
 
 
 def kicker(label: str, color: str, emoji: str):
+    bg = PASTEL_MAP.get(color, "#eeeeec")
+    text = TEXT_MAP.get(color, "#3a3a38")
     st.markdown(
-        f"<div style='display:inline-block;background:{color};color:white;"
-        f"padding:3px 12px;border-radius:4px;font-size:0.75rem;font-weight:700;"
+        f"<div style='display:inline-block;background:{bg};color:{text};"
+        f"border:1px solid {color};padding:3px 12px;border-radius:4px;font-size:0.75rem;font-weight:700;"
         f"letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.7rem;'>"
         f"{emoji} {label}</div>",
         unsafe_allow_html=True,
@@ -171,17 +180,19 @@ def render_card(row: pd.Series, latest_ts: pd.Timestamp, show_fresh_badge: bool 
     is_fresh = show_fresh_badge and (latest_ts - row["published"]) <= pd.Timedelta(hours=3)
     badge = " &nbsp;🔥 <span style='color:#ef4444;font-size:0.75em;'>NEW</span>" if is_fresh else ""
     summary = row["summary"] if pd.notna(row["summary"]) and row["summary"] else ""
+    pastel_bg = PASTEL_MAP.get(row["color"], "#f5f5f4")
+    text_color = TEXT_MAP.get(row["color"], "#33332f")
     st.markdown(
         f"""
-<div style="border:1px solid rgba(128,128,128,0.25);border-left:4px solid {row['color']};
+<div style="background:{pastel_bg};border:1px solid rgba(0,0,0,0.06);border-left:4px solid {row['color']};
             border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;height:100%;">
   <div class="headline-title" style="font-weight:600;margin-bottom:0.25rem;">
-    <a href="{row['url']}" target="_blank" style="text-decoration:none;">{row['title']}</a>{badge}
+    <a href="{row['url']}" target="_blank" style="text-decoration:none;color:{text_color};">{row['title']}</a>{badge}
   </div>
-  <div style="font-size:0.8em;opacity:0.65;margin-bottom:0.4rem;">
+  <div style="font-size:0.8em;opacity:0.75;margin-bottom:0.4rem;color:{text_color};">
     {row['emoji']} {row['area']} · {row['category']} · {row['source']} · {row['published']:%b %d, %H:%M}
   </div>
-  <div style="font-size:0.9em;opacity:0.85;">{summary}</div>
+  <div style="font-size:0.9em;opacity:0.9;color:#1a1a1a;">{summary}</div>
 </div>
 """,
         unsafe_allow_html=True,
@@ -393,7 +404,7 @@ with tabs[1]:
     if news_f.empty:
         st.info("No News items match the current filters.")
     else:
-        kicker("News", "#334155", "📰")
+        kicker("News", AREA_COLOR["News"], "📰")
         with st.expander("ℹ️ About these sources"):
             st.write(NEWS_SOURCES_NOTE)
 

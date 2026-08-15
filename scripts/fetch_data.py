@@ -41,6 +41,11 @@ NEWS_FEEDS = {
         ("Google Cloud Blog", "https://cloudblog.withgoogle.com/rss/"),
         ("Azure Blog", "https://azure.microsoft.com/en-us/blog/feed/"),
     ],
+    "Cybersecurity": [
+        ("Krebs on Security", "https://krebsonsecurity.com/feed/"),
+        ("The Hacker News", "https://feeds.feedburner.com/TheHackersNews"),
+        ("BleepingComputer", "https://www.bleepingcomputer.com/feed/"),
+    ],
     "World": [
         ("BBC World", "http://feeds.bbci.co.uk/news/world/rss.xml"),
         ("NPR World", "https://feeds.npr.org/1004/rss.xml"),

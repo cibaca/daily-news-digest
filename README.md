@@ -17,10 +17,10 @@ together, filtered together, or charted together.
 - **📊 Overview** — a compiled summary across all three areas: an auto-generated stats blurb,
   items-by-area chart, top sources, keyword chart, News activity timeline, the live Market
   Snapshot, and a combined "latest across everything" feed.
-- **📰 News** — sub-tabs for **Technology** (grouping Tech / AI / Software Engineering / Cloud,
-  each browsable individually or combined), **World**, **Sports**, **Finance** (includes a live
-  **Market Snapshot** — S&P 500, Nasdaq, Bitcoin), and **Science**. An "About these sources"
-  note documents why each source is trusted.
+- **📰 News** — sub-tabs for **Technology** (grouping Tech / AI / Software Engineering / Cloud /
+  Cybersecurity, each browsable individually or combined), **World**, **Sports**, **Finance**
+  (includes a live **Market Snapshot** — S&P 500, Nasdaq, Bitcoin), and **Science**. An "About
+  these sources" note documents why each source is trusted.
 - **📄 Research Papers** — fully separate from News. Papers from arXiv (cs.AI), classified by
   field (NLP, Machine Learning, Computer Vision, Robotics, ...) from each paper's own category
   tags, browsable per field.
@@ -36,11 +36,12 @@ together, filtered together, or charted together.
 | `data/knowledge_base.csv` | Knowledge Base | One curated GitHub repo | Single controlled, actively-maintained list — not an open aggregator |
 
 **News sources**: TechCrunch, Ars Technica, MIT Tech Review, AI News, InfoQ, Hacker News,
-AWS/Google Cloud/Azure blogs, BBC World, NPR World, ESPN, CNBC, NASA. All are either mainstream
-editorially-staffed newsrooms or official primary-source blogs — no content farms, no
-unverified aggregators. Hacker News is the one exception worth naming: it's community-curated
-tech discussion, included for signal, not treated as a newsroom. (Reuters was tried and dropped
-— its public RSS endpoint no longer resolves.)
+AWS/Google Cloud/Azure blogs, Krebs on Security, The Hacker News, BleepingComputer, BBC World,
+NPR World, ESPN, CNBC, NASA. All are either mainstream editorially-staffed newsrooms or official
+primary-source blogs — no content farms, no unverified aggregators. Hacker News (the
+aggregator, not Krebs) is the one exception worth naming: it's community-curated tech
+discussion, included for signal, not treated as a newsroom. (Reuters was tried and dropped —
+its public RSS endpoint no longer resolves.)
 
 **Research papers**: arXiv's per-category feeds (`cs.LG`, `cs.CL`, `cs.CV`, ...) are frequently
 empty on arXiv's own infrastructure, so `scripts/fetch_data.py` fetches the reliable `cs.AI`
@@ -60,12 +61,14 @@ Charts use a validated, colorblind-safe categorical palette (checked with the `d
 `validate_palette.js` — CVD ΔE and contrast gates, adjacency order kept fixed per chart via
 `category_orders`). A matching `.streamlit/config.toml` theme carries the same blue accent and
 warm off-white surface into the rest of the UI (buttons, tabs, sliders) for a consistent,
-professional look.
+professional look. Section badges ("kickers") and article cards use a **pastel tint + darkened
+text** of each topic's hue — softer "newspaper clipping" styling for UI chrome, while charts
+keep the full-saturation colors, since those are what the CVD/contrast gates apply to.
 
 | Area | Slot 1 (blue) | Slot 2 (orange) | Slot 3 (aqua) | Slot 4 (yellow) | Slot 5 (magenta) |
 |---|---|---|---|---|---|
 | **News topics** | Technology | World | Sports | Finance | Science |
-| **Tech sub-topics** | Tech | AI | Software Engineering | Cloud | — |
+| **Tech sub-topics** | Tech | AI | Software Engineering | Cloud | Cybersecurity |
 | **Research fields** | General AI | NLP | Machine Learning | Computer Vision | AI & Society (+ Robotics, Neural/Evolutionary in slots 6–7) |
 | **Areas (Overview)** | News | Research Papers | Knowledge Base | — | — |
 | **Market snapshot** | S&P 500 | Nasdaq | Bitcoin | — | — |
