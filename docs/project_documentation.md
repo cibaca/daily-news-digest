@@ -27,6 +27,68 @@ trust levels, different browsing needs — rather than dumped into one undiffere
 Live app: https://daily-news-digest-aug2026.streamlit.app
 Code: https://github.com/cibaca/daily-news-digest
 
+## Architecture
+
+```
+Data Sources                     Ingestion                    Storage
+─────────────                    ─────────                    ───────
+RSS (17 feeds)      ┐
+arXiv cs.AI RSS      ├──────►  fetch_data.py  ───────►  3 CSVs (data/*.csv)
+GitHub awesome-list  ┘          (News / Research /             │
+                                  Knowledge Base)                │ git push
+                                                                  │ (auto-commit via
+Yahoo Finance ──────────────────────────────────────────┐        │  GitHub Actions,
+  (live call, cached 1hr,                                │       │  daily 07:00 UTC
+   not part of the CSVs)                                 │       │  cron, only if
+                                                           │      │  data changed)
+                                                           ▼      ▼
+                                                       app.py
+                                        load_data() reads + normalizes all
+                                        3 CSVs into one schema (area /
+                                        category / color / emoji / ...);
+                                        disp() relabels for Simple mode;
+                                        sidebar applies per-area filters
+                                                           │
+                                                           ▼
+                                              Streamlit UI (4 top-level tabs)
+                                        📊 Overview │ 📰 News → Technology (5
+                                        sub-topics), World, Sports, Finance
+                                        (+Market Snapshot), Science │
+                                        📄 Research Papers → 7 fields │
+                                        📚 Knowledge Base → 14 sections
+                                                           │
+                                                           ▼
+                                          Streamlit Community Cloud
+                                       (auto-redeploys on every git push)
+```
+
+**Layers, bottom-up:**
+
+1. **Data sources** — four independent origins, all free, no API keys: RSS feeds (News), arXiv's
+   `cs.AI` RSS (Research Papers), a single GitHub repo's README (Knowledge Base), and Yahoo
+   Finance via `yfinance` (Market Snapshot — fetched live in-app, not batched into a CSV, since
+   prices move faster than daily news).
+2. **Ingestion** — `scripts/fetch_data.py` has one fetch function per area (News, Research
+   Papers, Knowledge Base), each writing its own CSV. Deliberately three separate files, not one
+   combined table, so each dataset can have its own schema, trust model, and refresh logic.
+3. **Automation** — `.github/workflows/refresh-news.yml` runs the fetch script daily (cron,
+   07:00 UTC) or on manual dispatch, and commits the CSVs back to the repo only if the data
+   actually changed.
+4. **Application layer** — `app.py` loads all three CSVs and normalizes them into one shared
+   schema (`area`, `category`, `color`, `emoji`, `published`, `summary`, `url`), which is what
+   lets the Overview tab compile stats across all three areas without three parallel code paths.
+   `disp()` swaps in plain-language labels when Simple mode is on; the sidebar builds per-area
+   filters (News topics/sources/dates, Research fields, Knowledge Base sections).
+5. **Presentation** — Streamlit UI: four top-level tabs, nested sub-tabs (Technology's five
+   sub-topics; Research's seven fields), Plotly charts using a validated colorblind-safe
+   palette, pastel-themed cards.
+6. **Deployment** — Streamlit Community Cloud, connected directly to the GitHub repo. Any push —
+   including the daily Action's auto-commit — triggers an automatic redeploy within a minute or
+   two, so the live app always reflects the latest data and code without a manual deploy step.
+
+*(If pasting into Google Docs: select the diagram block and set it to a monospace font, e.g.
+Courier New, so the alignment survives the paste.)*
+
 ## Datasets used
 
 | Dataset | Source | Size | Refresh |
