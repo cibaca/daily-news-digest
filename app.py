@@ -422,7 +422,7 @@ with tabs[0]:
     if not news_f.empty:
         top_news_cat = news_f["category"].value_counts().idxmax()
         overview_bits.append(
-            f"📰 **News**: {len(news_f)} articles from {news_f['source'].nunique()} trusted sources "
+            f"📰 <b>News</b>: {len(news_f)} articles from {news_f['source'].nunique()} trusted sources "
             f"across {news_f['category'].nunique()} topics -- most covered: {TOPIC_EMOJI.get(top_news_cat,'')} {disp(top_news_cat)}."
         )
     if not research_f.empty:
@@ -430,14 +430,14 @@ with tabs[0]:
         label = "research papers" if simple else "arXiv papers"
         unit = "topics" if simple else "fields"
         overview_bits.append(
-            f"📄 **Research Papers**: {len(research_f)} {label} across {research_f['category'].nunique()} {unit} "
+            f"📄 <b>Research Papers</b>: {len(research_f)} {label} across {research_f['category'].nunique()} {unit} "
             f"-- most covered: {disp(top_field)}."
         )
     if not kb_f.empty:
         top_section = kb_f["category"].value_counts().idxmax()
         source_desc = "one hand-picked, trustworthy list" if simple else "a single controlled source"
         overview_bits.append(
-            f"📚 **{disp('Knowledge Base')}**: {len(kb_f)} curated resources across {kb_f['category'].nunique()} sections "
+            f"📚 <b>{disp('Knowledge Base')}</b>: {len(kb_f)} curated resources across {kb_f['category'].nunique()} sections "
             f"from {source_desc} -- largest: {disp(top_section)}."
         )
     overview_line("&nbsp;&nbsp;|&nbsp;&nbsp;".join(overview_bits))
